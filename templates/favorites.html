@@ -1,0 +1,40 @@
+{% extends 'layout/base.html' %}
+
+{% load static %}
+
+{% block content %}
+        <section id="billboard">
+            <div class="container">
+                <div class="row">
+                    <h1>Избранные книги</h1>
+                    <div class="tab-content">
+                        <div id="all-genre" data-tab-content class="active">
+                            {% for favorite in favorites %}
+                                {% if forloop.counter0|divisibleby:4 %}
+                                    <div class="row">
+                                {% endif %}
+                                <div class="col-md-3">
+                                    <div class="product-item">
+                                        <figure class="product-style">
+                                            <a href="{% url 'books:book_detail' favorite.book.id %}">
+                                                <img src="{{ favorite.book.cover_image.url }}" alt="Books" class="product-item">
+                                            </a>
+                                            <button type="button" class="add-to-cart" data-product-tile="add-to-cart">Add to Cart</button>
+                                        </figure>
+                                        <figcaption>
+                                            <h3>{{ favorite.book.title }}</h3>
+                                            <span>{{ favorite.book.author }}</span>
+                                            <div class="item-price">$ {{ favorite.book.price }}</div>
+                                        </figcaption>
+                                    </div>
+                                </div>
+                                {% if forloop.counter|divisibleby:4 or forloop.last %}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+{% endblock %}

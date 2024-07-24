@@ -1,0 +1,177 @@
+{% extends 'layout/base.html' %}
+{% load static %}
+{% block content %}
+<style>
+    .favorite-btn {
+        position: absolute;
+        top: 5px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: white;
+        border: none;
+        color: red;
+    }
+    .favorite-btn.active {
+        background-color: red;
+        color: white;
+    }
+    .rating-stars .btn {
+        border: none;
+        background: none;
+        font-size: 2rem;
+        color: #ddd;
+    }
+    .rating-stars .btn.active {
+        color: #f39c12;
+    }
+</style>
+<section id="billboard" class="mt-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 position-relative">
+                <img src="{{ book.cover_image.url }}" class="img-fluid" alt="{{ book.title }}">
+                <form id="favorite-form" action="{% url 'books:add_to_favorites' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="book_id" value="{{ book.id }}">
+                    <button id="favorite-btn" type="submit"
+                            class="favorite-btn btn rounded-circle {% if is_favorite %}active{% endif %}">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="col-md-8">
+                <h1>{{ book.title }}</h1>
+                <p><strong>Автор:</strong> {{ book.author.first_name }} {{ book.author.last_name }}</p>
+                <p><strong>Жанр:</strong> {{ book.genre.name }}</p>
+                <p><strong>Год издания:</strong> {{ book.publication_year }}</p>
+                <p><strong>Цена:</strong> $ {{ book.price }}</p>
+                <p><strong>Описание:</strong> {{ book.description|default:"Описание отсутствует..." }}</p>
+                <div>
+                    <strong>Теги:</strong>
+                    {% for tag in book.tags.all %}
+                        {% if not forloop.last %}
+                            <a href="#">{{ tag.name }},</a>
+                        {% else %}
+                            <a href="#">{{ tag.name }}</a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                {% if user.is_authenticated %}
+                <form action="{% url 'books:rate_book' book.id %}" method="post">
+                    {% csrf_token %}
+                    <div class="rating-stars mb-2">
+                        {% for i in rating_range %}
+                        <button
+                                type="submit"
+                                name="score"
+                                value="{{ i }}"
+                                class="btn {% if user_rating and user_rating.score >= i %}active{% endif %}"
+                                aria-label="{{ i }} star"
+                        >
+                            <i class="fas fa-star"></i>
+                        </button>
+                        {% endfor %}
+                    </div>
+                </form>
+                {% else %}
+                <p><a href="{% url 'users:login' %}">Войдите</a>, чтобы оценить эту книгу.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mt-4">
+            <div class="col-12">
+                {% if user.is_authenticated %}
+                <form action="{% url 'books:add_review' book.id %}" method="POST" class="mt-4" id="formReview">
+                    {% csrf_token %}
+                    <input type="hidden" name="parent" id="contactparent" value="">
+                    <div class="form-group editContent">
+                        <label for="contactcomment" class="editContent">Ваш комментарий *</label>
+                        <textarea class="form-control border" rows="5" name="text" id="contactcomment"
+                                  required=""></textarea>
+                    </div>
+                    <button type="submit" class="mt-3 btn btn-success btn-block py-3">Отправить</button>
+                </form>
+                {% endif %}
+                <h2>Комментарии ({{ book.reviews_set.count }})</h2>
+                {% for review in book.get_review %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex align-items-start mb-4">
+                            {% if review.user.image %}
+                            <img src="{{ review.user.image.url }}" class="rounded-circle me-3"
+                                 alt="{{ review.user.username }}" width="50">
+                            {% else %}
+                            <img src="{% static 'images/default_avatar.jpg' %}" class="rounded-circle me-3"
+                                 alt="{{ review.user.username }}" width="50">
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">{{ review.user.username }}</h5>
+                                <p class="mb-0">{{ review.text }}</p>
+                                <a href="#formReview"
+                                   onclick="addReview('{{ review.user.username }}', '{{ review.id }}')">Ответить</a>
+
+                                <!-- Вложенные отзывы -->
+                                {% if review.reviews_set.all %}
+                                <div class="ms-4 mt-4">
+                                    {% for rev in review.reviews_set.all %}
+                                    <div class="d-flex align-items-start mb-3">
+                                        {% if rev.user.image %}
+                                        <img src="{{ rev.user.image.url }}" class="rounded-circle me-3"
+                                             alt="{{ rev.user.username }}" width="40">
+                                        {% else %}
+                                        <img src="{% static 'images/default_avatar.jpg' %}" class="rounded-circle me-3"
+                                             alt="{{ rev.user.username }}" width="40">
+                                        {% endif %}
+                                        <div class="flex-grow-1">
+                                            <h5 class="mb-1">{{ rev.user.username }}</h5>
+                                            <p class="mb-0">{{ rev.text }}</p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+<script src="https://kit.fontawesome.com/08641b117a.js" crossorigin="anonymous"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const favoriteForm = document.getElementById('favorite-form');
+        const favoriteBtn = document.getElementById('favorite-btn');
+
+        favoriteForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(favoriteForm);
+            fetch(favoriteForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    favoriteBtn.classList.toggle('active');
+                } else {
+                    alert('Произошла ошибка. Попробуйте снова.');
+                }
+            });
+        });
+    });
+    function addReview(name, id) {
+        document.getElementById("contactparent").value = id;
+        document.getElementById("contactcomment").innerText = `${name}, `;
+    }
+</script>
+{% endblock %}

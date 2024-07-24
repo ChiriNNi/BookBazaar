@@ -1,0 +1,57 @@
+{% extends 'layout/base.html' %}
+
+{% load static %}
+
+{% block content %}
+    <section id="billboard" class="mt-4">
+        <div class="container">
+            <div class="row">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="col-md-4 position-relative">
+                        <!-- Image upload -->
+                        <div class="square position-relative display-2 mb-3">
+                            <img src="{% if book.cover_image %} {{ book.cover_image.url }} {% else %} {% static 'images/default_cover.jpg' %} {% endif %}" alt="Обложка книги" class="img-fluid">
+                        </div>
+                        <!-- Button -->
+                        <div class="mb-3">
+                            {{ form.cover_image }}
+                            <label class="btn btn-success-soft btn-block" for="{{ form.cover_image.id_for_label }}">Загрузить обложку</label>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label"><strong>Название:</strong></label>
+                            {{ form.title }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Автор:</strong></label>
+                            <p>{{ request.user.first_name }} {{ request.user.last_name }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.genre.id_for_label }}" class="form-label"><strong>Жанр:</strong></label>
+                            {{ form.genre }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.publication_year.id_for_label }}" class="form-label"><strong>Год издания:</strong></label>
+                            {{ form.publication_year }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.price.id_for_label }}" class="form-label"><strong>Цена:</strong></label>
+                            {{ form.price }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label"><strong>Описание:</strong></label>
+                            {{ form.description }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.tags.id_for_label }}" class="form-label"><strong>Теги:</strong></label>
+                            {{ form.tags }}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+{% endblock %}

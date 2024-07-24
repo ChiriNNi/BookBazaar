@@ -1,0 +1,216 @@
+{% extends 'layout/base.html' %}
+
+{% load static %}
+
+{% block content %}
+    <style>
+        .book-card {
+            display: flex;
+            flex-direction: row;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #fff;
+            align-items: center;
+        }
+        .book-card img {
+            width: 100px;
+            height: 150px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        .book-card .book-details {
+            flex: 1;
+        }
+        .book-card .book-details h5 {
+            font-size: 1.125rem;
+            margin-bottom: 5px;
+        }
+        .book-card .book-details p {
+            margin-bottom: 5px;
+        }
+        .book-card .actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .book-card .actions .btn {
+            margin-bottom: 5px;
+        }
+        .favorite-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: white;
+            border: none;
+            color: red;
+        }
+        .favorite-btn.active {
+            background-color: red;
+            color: white;
+        }
+    </style>
+    <div id="notification" class="alert alert-success alert-dismissible fade" role="alert" style="display: none;">
+        <strong>Успешно добавлено!</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <section id="billboard" class="mt-4">
+        <div class="container">
+            <div class="row">
+                <!-- Основное содержимое -->
+                <div class="col-md-9">
+                    <h1 class="mb-4">Книги</h1>
+<div class="row">
+    {% for book in books %}
+        <div class="col-md-4 mb-4">
+            <div class="card border-light rounded shadow-sm d-flex flex-column align-items-stretch position-relative">
+                <img src="{{ book.cover_image.url }}" class="card-img-top rounded-top" alt="{{ book.title }}">
+                <!-- Add to Favorites Button -->
+                <form action="{% url 'books:add_to_favorites' %}" method="POST" class="position-absolute top-0 end-0 p-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="book_id" value="{{ book.id }}">
+                    <button id="favorite-btn" type="submit" class="favorite-btn btn rounded-circle {% if is_favorite %}active{% endif %}">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </form>
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div>
+                        <h4 class="card-title"><b>{{ book.title }}</b></h4>
+                        <p class="card-text"><strong>Автор:</strong> {{ book.author }}</p>
+                        <p class="card-text">
+                            {{ book.description|slice:":100" }}{% if book.description|length > 100 %}
+                            <a href="{% url 'books:book_detail' book.id %}">Читать далее</a>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="mt-2 d-flex align-items-center">
+                        <p class="card-text me-2"><strong>Цена:</strong> $ {{ book.price }}</p>
+                        <div class="ms-auto">
+                            <button type="button" class="btn btn-outline-primary rounded-circle" onclick="addToBasket({{ book.id }})">
+                                <i class="fas fa-shopping-cart"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <p>Пусто</p>
+        </div>
+    {% endfor %}
+</div>
+
+                </div>
+
+                <!-- Фильтры -->
+                <div class="col-md-3 filter-section">
+                    <h4>Фильтры</h4>
+                    <form action="{% url 'books:books' %}" method="GET">
+                        <div class="mb-3">
+                            <h5>Авторы</h5>
+                            {% for author in authors %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="author" value="{{ author.id }}" id="author-{{ author.id }}" {% if author.id in selected_authors %}checked{% endif %}>
+                                    <label class="form-check-label" for="author-{{ author.id }}">
+                                        {{ author.first_name }} {{ author.last_name }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            <h5>Теги</h5>
+                            {% for tag in tags %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="tag" value="{{ tag.id }}" id="tag-{{ tag.id }}" {% if tag.id in selected_tags %}checked{% endif %}>
+                                    <label class="form-check-label" for="tag-{{ tag.id }}">
+                                        {{ tag.name }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            <h5>Жанры</h5>
+                            {% for genre in genres %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="genre" value="{{ genre.id }}" id="genre-{{ genre.id }}" {% if genre.id in selected_genres %}checked{% endif %}>
+                                    <label class="form-check-label" for="genre-{{ genre.id }}">
+                                        {{ genre.name }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Применить фильтры</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script src="https://kit.fontawesome.com/08641b117a.js" crossorigin="anonymous"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const favoriteForm = document.getElementById('favorite-form');
+            const favoriteBtn = document.getElementById('favorite-btn');
+
+            favoriteForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(favoriteForm);
+                fetch(favoriteForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        favoriteBtn.classList.toggle('active');
+                    } else {
+                        alert('Произошла ошибка. Попробуйте снова.');
+                    }
+                });
+            });
+        });
+
+        function addToBasket(bookId) {
+            const url = `/basket/add/${bookId}/`;  // URL для POST-запроса с параметром
+            const csrfToken = "{{ csrf_token }}";  // CSRF токен для POST-запросов
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: new URLSearchParams({
+                    'book_id': bookId
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Показать уведомление
+                    showNotification('Успешно добавлено!');
+                } else {
+                    console.error('Failed to add book to basket');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.querySelector('strong').textContent = message;
+            notification.style.display = 'block';
+
+            // Скрыть уведомление через 3 секунды
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+{% endblock %}
+
+
+
